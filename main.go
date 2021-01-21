@@ -24,9 +24,9 @@ func main() {
 		Reactions: []contract.Reaction{
 			&contract.ReactionHealth{},
 			&contract.ReactionLog{},
+			&tgreact.CheckUpdate{},
 			&tgreact.Log{},
 			&tgreact.SendMessage{},
-			&tgreact.CheckUpdate{},
 			&tgreact.ResolveTag{},
 			tgreact.NewCommand(),
 			&tgreact.AskForAuthCode{},

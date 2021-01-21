@@ -32,11 +32,11 @@ func UpdateSchedule(task ScheduleTask) (err error) {
 		t := task.From
 
 		for {
-			if t.Format("15") == task.To.Format("15") {
+			if t.After(task.To) {
 				break
 			}
 
-			rowNum := t.Hour() + 1
+			rowNum := t.Hour() + 2 // 0 + shift
 
 			err = client.GetSheetClient().Update(
 					fmt.Sprintf("%s%s%d", *contract.GetConfig().SheetSchedulePage, dayCells[day], rowNum),
@@ -97,15 +97,20 @@ func GetTask(t time.Time) (*ScheduleTask, error) {
 
 				for {
 					endHour++
+
+					if endHour > 23 {
+						break
+					}
+
 					endHourCell := valueRange.Values[endHour]
 
-					if (len(endHourCell) == 1 && endHourCell[0] != "") || hour > 24 {
+					if (len(endHourCell) == 1 && endHourCell[0] != "") {
 						break
 					}
 				}
 
 				st.From = time.Date(t.Year(), t.Month(), t.Day(), startHour, 0, 0, t.Nanosecond(), t.Location())
-				st.To = time.Date(t.Year(), t.Month(), t.Day(), endHour, 0, 0, t.Nanosecond(), t.Location())
+				st.To = time.Date(t.Year(), t.Month(), t.Day(), endHour - 1, 59, 0, t.Nanosecond(), t.Location())
 			}
 		}
 

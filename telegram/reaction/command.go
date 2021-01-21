@@ -59,8 +59,13 @@ Available commands:
 }
 
 func set(update *tgbotapi.Update) {
+	txt := ""
+	if len(update.Message.Text) > 4 {
+		txt = update.Message.Text[5:]
+	}
+
 	r := regexp.MustCompile("(?P<days>([1-7],)*[1-7]{1})-(?P<from>(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9])-(?P<to>(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]) (?P<name>.*)")
-	match := r.FindStringSubmatch(update.Message.Text[5:])
+	match := r.FindStringSubmatch(txt)
 
 	if match == nil {
 		start(update)
@@ -122,7 +127,7 @@ func next(update *tgbotapi.Update) {
 		return
 	}
 
-	t, err = sheets.GetTask(t.To.Add(time.Second))
+	t, err = sheets.GetTask(t.To.Add(time.Hour))
 
 	if err != nil {
 		log.Println("[telegram.next] Unsuccessful response from next sheets", err)

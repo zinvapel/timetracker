@@ -17,8 +17,9 @@ func (sci SendCurrentImmediately) React(event *contract.Event) {
 			Type: "send_message",
 			Payload: map[string]string{
 				"message": fmt.Sprintf(
-					"Сейчас (%s): '%s' %s",
+					"Сейчас %s, начиная с %s: '%s' %s",
 					time.Now().Format("15:04"),
+					t.From.Format("15:04"),
 					t.Name,
 					sheets.GetSource(t).String(),
 				),

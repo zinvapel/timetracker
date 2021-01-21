@@ -9,7 +9,7 @@ type ResolveTag struct {}
 
 func (rt ResolveTag) React(event *contract.Event) {
 	if update, ok := event.Payload.(*tg.Update); ok {
-		if update.Message == nil || update.Message.Entities == nil {
+		if update.Message.Entities == nil {
 			return
 		}
 
