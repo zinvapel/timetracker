@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: timetracker-pvc
+spec:
+  resources:
+    requests:
+      storage: 32M
+  accessModes:
+    - ReadWriteMany
+#---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+#  name: timetracker-secret
+#stringData:
+#  credentials.json: "{}"
+#  apiToken: ""
+#  sheet: ""
+#  user: ""
+#  chat: ""
+#  ssp: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timetracker
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: timetracker
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: timetracker
+      name: timetracker
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: timetracker
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - name: go
+          image: zinvapel/timetracker:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 50000
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 50000
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100M
+            limits:
+              cpu: 200m
+              memory: 400M
+          args:
+            - "-token"
+            - "$(TG_API_TOKEN)"
+            - "-user"
+            - "$(TG_USER_ID)"
+            - "-chat"
+            - "$(TG_CHAT_ID)"
+            - "-sheet"
+            - "$(GS_SHEET)"
+            - "-ssp"
+            - "$(GS_SCHEDULE_PAGE)"
+            - "-stoken"
+            - "/token/$(TG_USER_ID).json"
+            - "-scred"
+            - "/cred/credentials.json"
+          env:
+            - name: TG_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: apiToken
+                  name: timetracker-secret
+            - name: TG_USER_ID
+              valueFrom:
+                secretKeyRef:
+                  key: user
+                  name: timetracker-secret
+            - name: TG_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  key: chat
+                  name: timetracker-secret
+            - name: GS_SHEET
+              valueFrom:
+                secretKeyRef:
+                  key: sheet
+                  name: timetracker-secret
+            - name: GS_SCHEDULE_PAGE
+              valueFrom:
+                secretKeyRef:
+                  key: ssp
+                  name: timetracker-secret
+          volumeMounts:
+            - name: credentials
+              mountPath: /cred
+              readOnly: true
+            - mountPath: /token
+              name: token-storage
+      volumes:
+        - name: credentials
+          secret:
+            secretName: timetracker-secret
+        - name: token-storage
+          persistentVolumeClaim:
+            claimName: timetracker-pvc
