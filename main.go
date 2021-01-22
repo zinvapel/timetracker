@@ -32,6 +32,7 @@ func main() {
 			&tgreact.AskForAuthCode{},
 			&tgreact.ResponseForAuthCode{},
 			&sreact.CurrentTask{},
+			&sreact.UpdateMainPage{},
 			&sreact.SendCurrentImmediately{},
 		},
 	}

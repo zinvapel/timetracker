@@ -1,6 +1,7 @@
 package reaction
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/zinvapel/timetracker/contract"
 	"github.com/zinvapel/timetracker/sheets"
@@ -18,6 +19,7 @@ func NewCommand() *Command {
 			"/set": set,
 			"/now": current,
 			"/next": next,
+			"/sheet": sheet,
 		},
 	}
 }
@@ -50,11 +52,13 @@ func (c Command) Fallback(update *tgbotapi.Update) {
 func start(update *tgbotapi.Update) {
 	telegram.SendString(update.Message.Chat.ID, `Welcome to Google Sheet based Planning Bot
 Available commands:
+/start - this help
 /set <dnum,dnum>-<from>-<to> <name> - Set task for time 
 	dnum - 1 to 7 is Monday-Sunday
 	from,to - 01:00 like format time
-/current - get current task
+/now - get current task
 /next - get next task
+/sheet - get google sheet url
 `)
 }
 
@@ -138,6 +142,13 @@ func next(update *tgbotapi.Update) {
 		Type: "send_task_immediately",
 		Payload: t,
 	})
+}
+
+func sheet(update *tgbotapi.Update) {
+	telegram.SendString(
+		update.Message.Chat.ID,
+		fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s/edit", *contract.GetConfig().SheetId),
+		)
 }
 
 
