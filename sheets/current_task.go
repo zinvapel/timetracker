@@ -75,12 +75,19 @@ func GetTask(t time.Time) (*ScheduleTask, error) {
 	if valueRange != nil {
 		st := &ScheduleTask{Days: []string{strconv.Itoa(1 + int(t.Weekday()))}}
 
+		if len(valueRange.Values) < 24 {
+			for i := len(valueRange.Values); i < 24; i++ {
+				valueRange.Values = append(valueRange.Values, []interface{}{})
+			}
+		}
+
 		for hour, _ := range valueRange.Values {
 			if hour == t.Hour() {
 				startHour := hour
 
 				for {
 					startHourCell := valueRange.Values[startHour]
+
 					if (len(startHourCell) == 1 && startHourCell[0] != "") || hour < 0 {
 						if name, ok := startHourCell[0].(string); ok {
 							st.Name = name
@@ -104,7 +111,7 @@ func GetTask(t time.Time) (*ScheduleTask, error) {
 
 					endHourCell := valueRange.Values[endHour]
 
-					if (len(endHourCell) == 1 && endHourCell[0] != "") {
+					if len(endHourCell) == 1 && endHourCell[0] != "" {
 						break
 					}
 				}

@@ -9,6 +9,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 	"log"
 	"net/http"
@@ -47,6 +48,7 @@ func (c Client) Update(writeRange string, vr *sheets.ValueRange) (err error) {
 	if c.Err != nil {
 		return c.Err
 	}
+
 	_, err = c.Srv.Values.Update(c.SpreadsheetId, writeRange, vr).ValueInputOption("RAW").Do()
 
 	if err != nil {
@@ -79,7 +81,12 @@ func obtainClient() Client {
 		return Client{Err: err}
 	}
 
-	srv, err := sheets.New(getClient(config))
+	ctx := context.Background()
+	srv, err := sheets.NewService(
+		ctx,
+		option.WithTokenSource(config.TokenSource(ctx, getToken(config))),
+	)
+
 	if err != nil {
 		log.Printf("[sheets.client] Unable to retrieve Sheets client: %v\n", err)
 		return Client{Err: err}
@@ -89,6 +96,10 @@ func obtainClient() Client {
 }
 
 func getClient(config *oauth2.Config) *http.Client {
+	return config.Client(context.Background(), getToken(config))
+}
+
+func getToken(config *oauth2.Config) *oauth2.Token {
 	tokFileName := *contract.GetConfig().SheetTokenFile
 	tok, err := tokenFromFile(tokFileName)
 
@@ -102,7 +113,7 @@ func getClient(config *oauth2.Config) *http.Client {
 		}
 	}
 
-	return config.Client(context.Background(), tok)
+	return tok
 }
 
 func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
