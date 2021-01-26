@@ -8,6 +8,7 @@ import (
 	"github.com/zinvapel/timetracker/telegram"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,6 +21,7 @@ func NewCommand() *Command {
 			"/now": current,
 			"/next": next,
 			"/sheet": sheet,
+			"/update": updateTask,
 		},
 	}
 }
@@ -59,6 +61,10 @@ Available commands:
 /now - get current task
 /next - get next task
 /sheet - get google sheet url
+/update <updatetype><type> <nval> - Set task current points
+	updatetype - n for name, c for current points, t for total
+	type - o for 'Обучение', e for 'Ежедневная задача', n for 'Наука'
+	nval - new value
 `)
 }
 
@@ -149,6 +155,90 @@ func sheet(update *tgbotapi.Update) {
 		update.Message.Chat.ID,
 		fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s/edit", *contract.GetConfig().SheetId),
 		)
+}
+
+func updateTask(update *tgbotapi.Update) {
+	txt := ""
+	if len(update.Message.Text) > 7 {
+		txt = update.Message.Text[8:]
+	}
+
+	r := regexp.MustCompile("^(?P<updateType>([nct]))(?P<type>([oen])) (?P<newval>.*)$")
+	match := r.FindStringSubmatch(txt)
+
+	if match == nil {
+		start(update)
+		return
+	}
+
+	result := make(map[string]string)
+	for i, name := range r.SubexpNames() {
+		if i != 0 && name != "" {
+			result[name] = match[i]
+		}
+	}
+
+	srcMap := map[string]string{
+		"o": "Обучение",
+		"e": "Ежедневная задача",
+		"n": "Наука",
+	}
+
+	if config, ok := sheets.SourceConfigMap[srcMap[result["type"]]]; ok {
+		addr := ""
+		val := result["newval"]
+
+		switch result["updateType"] {
+		case "n":
+			addr = fmt.Sprintf(
+				"%s%s:%s",
+				config.Page,
+				config.Address,
+				config.Address,
+			)
+		case "c":
+			addr = fmt.Sprintf(
+				"%s%s:%s",
+				config.Page,
+				config.CurrentPointsAddr,
+				config.CurrentPointsAddr,
+			)
+			_, err := strconv.Atoi(val)
+
+			if err != nil {
+				start(update)
+				return
+			}
+		case "t":
+			addr = fmt.Sprintf(
+				"%s%s:%s",
+				config.Page,
+				config.TotalPointsAddr,
+				config.TotalPointsAddr,
+			)
+			_, err := strconv.Atoi(val)
+
+			if err != nil {
+				start(update)
+				return
+			}
+		}
+
+		if sheets.Update(addr, val) == nil {
+			telegram.SendString(
+				update.Message.Chat.ID,
+				"Done",
+			)
+			err := sheets.BumpLogInfo(config)
+
+			if err != nil {
+				telegram.SendString(
+					update.Message.Chat.ID,
+					fmt.Sprintf("%s: '%s'", "Logging went wrong", err),
+				)
+			}
+		}
+	}
 }
 
 

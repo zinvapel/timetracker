@@ -60,6 +60,22 @@ func (c Client) Update(writeRange string, vr *sheets.ValueRange) (err error) {
 	return
 }
 
+func (c Client) Append(vr *sheets.ValueRange) (err error) {
+	if c.Err != nil {
+		return c.Err
+	}
+
+	_, err = c.Srv.Values.Append(c.SpreadsheetId, "Прогресс!A1", vr).ValueInputOption("RAW").Do()
+
+	if err != nil {
+		if _, ok := err.(*googleapi.Error); ok || strings.Contains(err.Error(), "oauth2") {
+			client = nil
+		}
+	}
+
+	return
+}
+
 var client *Client
 
 func GetSheetClient() *Client {

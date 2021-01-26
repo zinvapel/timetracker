@@ -1,9 +1,12 @@
 package sheets
 
 import (
+	"errors"
 	"fmt"
 	"github.com/zinvapel/timetracker/sheets/client"
+	"google.golang.org/api/sheets/v4"
 	"strconv"
+	"time"
 )
 
 type TaskSource struct {
@@ -35,47 +38,33 @@ type TaskSourceConfig struct {
 }
 
 // @todo move to personal config
-var mpSources map[string]*TaskSourceConfig = map[string]*TaskSourceConfig{
-	"Месячная задача": {
-		Name:              "Месячная задача",
+var SourceConfigMap map[string]*TaskSourceConfig = map[string]*TaskSourceConfig{
+	"Обучение": {
+		Name:              "Обучение",
 		Page:              "Картина дня!",
-		Address:           "D2",
-		CurrentPointsAddr: "E6",
-		TotalPointsAddr:   "D6",
-	},
-	"Курсы": {
-		Name:              "Курс",
-		Page:              "Картина дня!",
-		Address:           "F3",
-		CurrentPointsAddr: "F4",
-		TotalPointsAddr:   "F5",
-	},
-	"Наука": {
-		Name:              "Наука",
-		Page:              "Картина дня!",
-		Address:           "G3",
-		CurrentPointsAddr: "G4",
-		TotalPointsAddr:   "G5",
-	},
-	"Легкое чтение": {
-		Name:              "Легкое чтение",
-		Page:              "Картина дня!",
-		Address:           "H3",
-		CurrentPointsAddr: "H4",
-		TotalPointsAddr:   "H5",
+		Address:           "C3",
+		CurrentPointsAddr: "C4",
+		TotalPointsAddr:   "C5",
 	},
 	"Ежедневная задача": {
 		Name:              "Ежедневная задача",
 		Page:              "Картина дня!",
-		Address:           "I3",
-		CurrentPointsAddr: "I4",
-		TotalPointsAddr:   "I5",
+		Address:           "D3",
+		CurrentPointsAddr: "D4",
+		TotalPointsAddr:   "D5",
+	},
+	"Наука": {
+		Name:              "Наука",
+		Page:              "Картина дня!",
+		Address:           "E3",
+		CurrentPointsAddr: "E4",
+		TotalPointsAddr:   "E5",
 	},
 }
 
 func GetSource(task *ScheduleTask) *TaskSource {
 	ts := &TaskSource{}
-	if srcConf, ok := mpSources[task.Name]; ok {
+	if srcConf, ok := SourceConfigMap[task.Name]; ok {
 		valueRange, err := client.GetSheetClient().Get(
 			fmt.Sprintf(
 				"%s%s:%s",
@@ -125,4 +114,45 @@ func GetSource(task *ScheduleTask) *TaskSource {
 	}
 
 	return ts
+}
+
+func Update(addr, value string) error {
+	return client.GetSheetClient().Update(
+		addr,
+		&sheets.ValueRange{
+			Values: [][]interface{}{{value}},
+		},
+	)
+}
+
+func BumpLogInfo(srcConf *TaskSourceConfig) error {
+	valueRange, err := client.GetSheetClient().Get(
+		fmt.Sprintf(
+			"%s%s:%s",
+			srcConf.Page,
+			srcConf.Address,
+			srcConf.CurrentPointsAddr,
+		),
+	)
+
+	if err == nil && valueRange != nil {
+		if len(valueRange.Values) > 1 && len(valueRange.Values[0]) > 0 && len(valueRange.Values[1]) > 0 {
+			return client.GetSheetClient().Append(
+				&sheets.ValueRange{
+					Values: [][]interface{}{
+						{
+							srcConf.Name,
+							valueRange.Values[0][0],
+							valueRange.Values[1][0],
+							time.Now(),
+						},
+					},
+				},
+			)
+		} else {
+			return errors.New("bad task settings")
+		}
+	}
+
+	return err
 }

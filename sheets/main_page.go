@@ -28,6 +28,11 @@ func RefreshMainPage(t time.Time) (err error) {
 	if valueRange != nil {
 		rng := fmt.Sprintf("%sB2:B25", "Картина дня!")
 		valueRange.Range = rng
+		for k, v := range valueRange.Values {
+			if len(v) == 0 {
+				valueRange.Values[k] = []interface{}{""}
+			}
+		}
 		err = client.GetSheetClient().Update(
 			rng,
 			valueRange,
